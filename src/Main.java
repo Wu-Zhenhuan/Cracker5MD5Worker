@@ -61,39 +61,54 @@ class WorkerSession extends Thread {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(session.getInputStream()));
                 PrintWriter writer = new PrintWriter(session.getOutputStream(), true)) {
 
-            System.out.print("Waiting for user input from terminal..."); System.out.flush();
-            while (!reader.ready()) {
+            while (!session.isClosed()) {
 
-            }
-            String line = reader.readLine();
-            System.out.println("\nTask:" + line);
-            int start = getIndex(line.charAt(0));
-            int end = getIndex(line.charAt(1));
-            if ((start == -1) || (end == -1) || (start > end)) {
-                System.err.println("Illegal range input!");
-                writer.println("Illegal range input!");
-                return;
-            }
-            String cypher = line.substring(2);
-            System.out.println("First character range: from '" + ALPHABET[start] + "' to '" + ALPHABET[end] + "'");
-            writer.println("First character range: from '" + ALPHABET[start] + "' to '" + ALPHABET[end] + "'");
-            System.out.println("Cypher: " + cypher);
-            writer.println("Cypher: " + cypher);
+                System.out.print("Waiting for user input from terminal...");
+                System.out.flush();
+                while (!reader.ready()) {
 
-            String plain = this.crack(start, end, cypher);
-            if (plain == null) {
-                System.err.println("Unable to crack!");
-                writer.println("Unable to crack!");
-            } else {
-                System.out.println("Plain: " + plain);
-                writer.println("Plain: " + plain);
-            }
+                }
+                String line = reader.readLine().trim();
+                System.out.println("\nTask received from terminal: " + line);
+                if ((line.length()==4)&&(line.equalsIgnoreCase("exit"))) {
+                    System.out.println("This session is ending.");
+                    session.close();
+                    return;
+                }
+                if (line.length() != 34) {
+                    System.err.println("Wrong format!\nInput must be [start char][end char][MD5 Hash of 32 chars].\nType 'exit' to quit.");
+                    writer.println("Wrong format!\nInput must be [start char][end char][MD5 Hash of 32 chars]\nType 'exit' to quit.");
+                    return;
+                }
+                int start = getIndex(line.charAt(0));
+                int end = getIndex(line.charAt(1));
+                if ((start == -1) || (end == -1) || (start > end)) {
+                    System.err.println("Illegal range input!");
+                    writer.println("Illegal range input!");
+                    return;
+                }
+                String cypher = line.substring(2).toLowerCase();
+                System.out.println("First character range: from '" + ALPHABET[start] + "' to '" + ALPHABET[end] + "'");
+                writer.println("First character range: from '" + ALPHABET[start] + "' to '" + ALPHABET[end] + "'");
+                System.out.println("Cypher: " + cypher);
+                writer.println("Cypher: " + cypher);
 
+                String plain = this.crack(start, end, cypher);
+                if (plain == null) {
+                    System.err.println("Unable to crack!");
+                    writer.println("Unable to crack!");
+                } else {
+                    System.out.println("Plain: " + plain);
+                    writer.println("Plain: " + plain);
+                }
+            }
+            session.close();
         } catch (Exception e) {
             System.err.println("Cracker5MD5 Work exits at WorkerSession.run() due to the following:");
             e.printStackTrace();
             System.exit(0);
         }
+        System.out.println("Client at " + session.getInetAddress() + ":" + session.getPort() + " are closed!");
     }
     private static int getIndex (char c) {
         if (('A' <= c) && (c <= 'Z')) {
@@ -106,7 +121,7 @@ class WorkerSession extends Thread {
     }
 
     private String crack(int start, int end, String cypher) {
-        for (int i = start; i < ALPHABET.length; i++) {
+        for (int i = start; i <= end; i++) {
             for (int j = 0; j < ALPHABET.length; j++) {
                 for (int k = 0; k < ALPHABET.length; k++) {
                     for (int l = 0; l < ALPHABET.length; l++) {
