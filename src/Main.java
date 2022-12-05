@@ -70,7 +70,7 @@ class WorkerSession extends Thread {
                 }
                 String line = reader.readLine().trim();
                 System.out.println("\nTask received from terminal: " + line);
-                if ((line.length()==4)&&(line.equalsIgnoreCase("exit"))) {
+                if (line.equalsIgnoreCase("exit")) {
                     System.out.println("This session is ending.");
                     session.close();
                     return;
